@@ -8,6 +8,8 @@ import br.gov.sp.etec.gestaomicroprodutores.api.usuario.dto.DadosCadastroUsuario
 import br.gov.sp.etec.gestaomicroprodutores.api.usuario.dto.DadosDetalhamentoUsuario;
 import br.gov.sp.etec.gestaomicroprodutores.api.usuario.dto.DadosTokenJWT;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,6 +24,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RequestMapping("/auth")
 public class AutenticacaoController {
 
+    private static final Logger log = LoggerFactory.getLogger(AutenticacaoController.class);
+
     @Autowired
     private AuthenticationManager authenticationManager;
 
@@ -33,11 +37,13 @@ public class AutenticacaoController {
 
     @PostMapping("/login")
     public ResponseEntity<DadosTokenJWT> login(@RequestBody @Valid DadosAutenticacao dados) {
+        log.info("Login solicitado para e-mail={}", dados.email());
         var tokenAutenticacao = new UsernamePasswordAuthenticationToken(dados.email(), dados.senha());
         var authentication = authenticationManager.authenticate(tokenAutenticacao);
 
         var login = (Login) authentication.getPrincipal();
         var tokenJWT = tokenService.gerarToken(login);
+        log.info("Login bem-sucedido: idUsuario={} e-mail={}", login.getUsuario().getIdUsuario(), login.getEmail());
 
         return ResponseEntity.ok(new DadosTokenJWT(
                 tokenJWT,
@@ -52,7 +58,10 @@ public class AutenticacaoController {
             @RequestBody @Valid DadosCadastroUsuario dados,
             UriComponentsBuilder uriBuilder
     ) {
+        log.info("Cadastro solicitado: nome={} sobrenome={} e-mail={} cpf={} telefone={}",
+                dados.nome(), dados.sobrenome(), dados.email(), dados.cpf(), dados.telefone());
         var usuarioDetalhado = usuarioService.cadastrar(dados);
+        log.info("Usuario cadastrado: idUsuario={} e-mail={}", usuarioDetalhado.idUsuario(), usuarioDetalhado.email());
         var uri = uriBuilder.path("/usuarios/{id}").buildAndExpand(usuarioDetalhado.idUsuario()).toUri();
 
         return ResponseEntity.created(uri).body(usuarioDetalhado);
