@@ -46,4 +46,21 @@ public class Insumo {
         this.precoUnitario = dados.precoUnitario();
         this.observacoes = dados.observacoes();
     }
+
+    public void debitarEstoque(BigDecimal quantidade) {
+        if (quantidade == null || quantidade.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException("A quantidade aplicada deve ser maior que zero!");
+        }
+        if (this.quantidadeEstoque.compareTo(quantidade) < 0) {
+            throw new br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException(
+                    "Estoque insuficiente para o insumo '" + this.nome + "'. Disponível: " + this.quantidadeEstoque + " " + this.unidadeMedida);
+        }
+        this.quantidadeEstoque = this.quantidadeEstoque.subtract(quantidade);
+    }
+
+    public void estornarEstoque(BigDecimal quantidade) {
+        if (quantidade != null && quantidade.compareTo(BigDecimal.ZERO) > 0) {
+            this.quantidadeEstoque = this.quantidadeEstoque.add(quantidade);
+        }
+    }
 }

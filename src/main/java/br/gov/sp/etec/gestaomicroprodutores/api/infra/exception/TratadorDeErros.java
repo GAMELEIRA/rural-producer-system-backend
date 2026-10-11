@@ -27,6 +27,12 @@ public class TratadorDeErros {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("mensagem", ex.getMessage() != null ? ex.getMessage() : "Recurso nao encontrado"));
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<Map<String, String>> tratarErroRotaNaoEncontrada(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        log.warn("Rota nao encontrada: /{}", ex.getResourcePath());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("mensagem", "Rota nao encontrada: /" + ex.getResourcePath()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<List<DadosErroValidacao>> tratarErro400Validacao(MethodArgumentNotValidException ex) {
         var erros = ex.getFieldErrors();

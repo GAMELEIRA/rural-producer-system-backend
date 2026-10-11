@@ -43,4 +43,22 @@ public class Produto {
         this.quantidadeEstoque = dados.quantidadeEstoque();
         this.observacoes = dados.observacoes();
     }
+
+    public void adicionarEstoque(BigDecimal quantidade) {
+        if (quantidade == null || quantidade.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException("Quantidade adicionada ao estoque deve ser maior que zero!");
+        }
+        this.quantidadeEstoque = this.quantidadeEstoque.add(quantidade);
+    }
+
+    public void baixarEstoque(BigDecimal quantidade) {
+        if (quantidade == null || quantidade.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException("Quantidade para baixa no estoque deve ser maior que zero!");
+        }
+        if (this.quantidadeEstoque.compareTo(quantidade) < 0) {
+            throw new br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException(
+                    "Estoque insuficiente do produto '" + this.nome + "'. Disponível: " + this.quantidadeEstoque + " " + this.unidadeMedida);
+        }
+        this.quantidadeEstoque = this.quantidadeEstoque.subtract(quantidade);
+    }
 }
