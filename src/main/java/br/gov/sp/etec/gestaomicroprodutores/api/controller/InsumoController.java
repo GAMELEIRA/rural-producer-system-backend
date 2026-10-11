@@ -12,7 +12,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 
 @RestController
-@RequestMapping("/insumos")
+@RequestMapping({"/insumos", "/insumos/"})
 public class InsumoController {
 
     @Autowired

@@ -12,7 +12,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 
 @RestController
-@RequestMapping("/culturas")
+@RequestMapping({"/culturas", "/culturas/"})
 public class CulturaController {
 
     @Autowired

@@ -12,7 +12,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 
 @RestController
-@RequestMapping("/produtos")
+@RequestMapping({"/produtos", "/produtos/"})
 public class ProdutoController {
 
     @Autowired
