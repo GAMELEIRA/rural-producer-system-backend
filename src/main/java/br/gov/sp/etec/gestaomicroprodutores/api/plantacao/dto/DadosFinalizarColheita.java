@@ -15,6 +15,9 @@ public record DadosFinalizarColheita(
         @PositiveOrZero(message = "A quantidade colhida não pode ser negativa")
         BigDecimal quantidadeColhida,
 
+        @NotNull(message = "Informe o produto que receberá a colheita")
+        Long idProduto,
+
         @Size(max = 500, message = "As observações devem ter no máximo 500 caracteres")
         String observacoes
 ) {
