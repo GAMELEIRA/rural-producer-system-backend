@@ -44,6 +44,13 @@ public class Produto {
         this.observacoes = dados.observacoes();
     }
 
+    public void atualizarDadosCadastrais(DadosCadastroProduto dados) {
+        this.nome = dados.nome();
+        this.unidadeMedida = dados.unidadeMedida();
+        this.precoVenda = dados.precoVenda();
+        this.observacoes = dados.observacoes();
+    }
+
     public void adicionarEstoque(BigDecimal quantidade) {
         if (quantidade == null || quantidade.compareTo(BigDecimal.ZERO) <= 0) {
             throw new br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException("Quantidade adicionada ao estoque deve ser maior que zero!");
