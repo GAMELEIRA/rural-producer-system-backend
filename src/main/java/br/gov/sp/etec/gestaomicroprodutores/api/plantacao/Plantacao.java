@@ -95,10 +95,14 @@ public class Plantacao {
         }
     }
 
+    public void definirSafra(br.gov.sp.etec.gestaomicroprodutores.api.safra.Safra safra) {
+        this.safra = safra;
+    }
+
     public void finalizarColheita(DadosFinalizarColheita dados) {
         this.dataColheita = dados.dataColheita();
         this.quantidadeColhida = dados.quantidadeColhida();
-        this.status = "COLHIDO";
+        this.status = "COLHIDA";
         if (dados.observacoes() != null && !dados.observacoes().isBlank()) {
             this.observacoes = (this.observacoes == null || this.observacoes.isBlank()) 
                     ? dados.observacoes() 
