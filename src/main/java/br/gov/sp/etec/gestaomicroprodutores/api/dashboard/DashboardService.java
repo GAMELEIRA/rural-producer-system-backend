@@ -113,6 +113,7 @@ public class DashboardService {
             vendasPorMesMap.merge(mesAno, v.getValorTotal(), BigDecimal::add);
         }
         List<ItemGraficoMes> vendasPorMes = vendasPorMesMap.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(Comparator.comparing(s -> java.time.YearMonth.parse(s, fmt))))
                 .map(e -> new ItemGraficoMes(e.getKey(), e.getValue()))
                 .toList();
 

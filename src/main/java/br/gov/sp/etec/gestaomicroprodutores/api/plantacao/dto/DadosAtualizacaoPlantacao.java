@@ -9,6 +9,7 @@ import java.time.LocalDate;
 public record DadosAtualizacaoPlantacao(
         Long idTalhao,
         Long idCultura,
+        Long idSafra,
         LocalDate dataPlantio,
         LocalDate dataColheita,
 

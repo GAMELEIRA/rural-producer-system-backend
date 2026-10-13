@@ -65,7 +65,7 @@ public class VendaService {
         Venda venda = new Venda(dados.dataVenda(), dados.cliente(), dados.formaPagamento(), dados.observacoes());
 
         for (DadosItemVenda itemDto : dados.itens()) {
-            Produto produto = produtoRepository.findById(itemDto.idProduto())
+            Produto produto = produtoRepository.buscarParaMovimentacao(itemDto.idProduto())
                     .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado com ID: " + itemDto.idProduto()));
 
             BigDecimal saldoAnterior = produto.getQuantidadeEstoque();

@@ -14,6 +14,9 @@ public record DadosCadastroPlantacao(
         @NotNull(message = "O ID da cultura é obrigatório")
         Long idCultura,
 
+        @NotNull(message = "O ID da safra é obrigatório")
+        Long idSafra,
+
         @NotNull(message = "A data de plantio é obrigatória")
         LocalDate dataPlantio,
 

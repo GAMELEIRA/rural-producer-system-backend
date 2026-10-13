@@ -6,6 +6,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("SELECT p FROM Produto p WHERE p.idProduto = :id")
+    java.util.Optional<Produto> buscarParaMovimentacao(@org.springframework.data.repository.query.Param("id") Long id);
+
     boolean existsByNomeIgnoreCase(String nome);
 
     boolean existsByNomeIgnoreCaseAndIdProdutoNot(String nome, Long idProduto);
