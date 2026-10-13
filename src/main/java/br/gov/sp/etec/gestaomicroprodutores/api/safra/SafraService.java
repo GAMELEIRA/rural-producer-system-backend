@@ -67,6 +67,17 @@ public class SafraService {
         LocalDate dataFimFinal = dados.dataFim() != null ? dados.dataFim() : safra.getDataFim();
         validarDatas(dataInicioFinal, dataFimFinal);
 
+        boolean foraDoPeriodo = plantacaoRepository.findAll().stream()
+                .anyMatch(plantacao -> plantacao.getSafra() != null
+                        && id.equals(plantacao.getSafra().getIdSafra())
+                        && (plantacao.getDataPlantio().isBefore(dataInicioFinal)
+                        || plantacao.getDataPlantio().isAfter(dataFimFinal)
+                        || (plantacao.getDataColheita() != null
+                        && (plantacao.getDataColheita().isBefore(dataInicioFinal)
+                        || plantacao.getDataColheita().isAfter(dataFimFinal)))));
+        if (foraDoPeriodo) {
+            throw new RegraDeNegocioException("Datas da safra incompatíveis com as plantações existentes!");
+        }
         safra.atualizarInformacoes(dados);
 
         return new DadosDetalhamentoSafra(safra);
