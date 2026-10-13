@@ -39,7 +39,7 @@ public class ProdutoService {
         if (produtoRepository.existsByNomeIgnoreCaseAndIdProdutoNot(dados.nome(), id)) {
             throw new RegraDeNegocioException("Ja existe umo produto cadastrado com este nome!");
         }
-        produto.atualizarInformacoes(dados);
+        produto.atualizarDadosCadastrais(dados);
         return new DadosDetalhamentoProduto(produto);
     }
 
