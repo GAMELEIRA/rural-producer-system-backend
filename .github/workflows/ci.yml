@@ -15,4 +15,4 @@ jobs:
           java-version: '21'
           cache: maven
       - name: Compile and test
-        run: ./mvnw -B -DskipTests=false test
+        run: bash mvnw -B -DskipTests=false test
