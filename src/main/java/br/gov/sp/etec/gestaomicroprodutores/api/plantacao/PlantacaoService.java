@@ -141,7 +141,7 @@ public class PlantacaoService {
             throw new RegraDeNegocioException("A data da colheita não pode ser anterior à data de plantio (" + plantacao.getDataPlantio() + ")!");
         }
 
-        Produto produto = produtoRepository.findById(dados.idProduto())
+        Produto produto = produtoRepository.buscarParaMovimentacao(dados.idProduto())
                 .orElseThrow(() -> new EntityNotFoundException("Produto da colheita não encontrado"));
         if (dados.quantidadeColhida().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal anterior = produto.getQuantidadeEstoque();
