@@ -1,6 +1,7 @@
 package br.gov.sp.etec.gestaomicroprodutores.api.safra;
 
 import br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException;
+import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.PlantacaoRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.safra.dto.DadosAtualizacaoSafra;
 import br.gov.sp.etec.gestaomicroprodutores.api.safra.dto.DadosCadastroSafra;
 import br.gov.sp.etec.gestaomicroprodutores.api.safra.dto.DadosDetalhamentoSafra;
@@ -17,6 +18,9 @@ public class SafraService {
 
     @Autowired
     private SafraRepository safraRepository;
+
+    @Autowired
+    private PlantacaoRepository plantacaoRepository;
 
     public List<DadosDetalhamentoSafra> listar() {
         return safraRepository.findAllComPlantacoes()
@@ -71,6 +75,10 @@ public class SafraService {
     @Transactional
     public DadosDetalhamentoSafra finalizar(Long id) {
         Safra safra = obter(id);
+        boolean pendentes = plantacaoRepository.findAll().stream()
+                .anyMatch(p -> p.getSafra() != null && id.equals(p.getSafra().getIdSafra())
+                        && !"COLHIDA".equalsIgnoreCase(p.getStatus()) && !"COLHIDO".equalsIgnoreCase(p.getStatus()));
+        if (pendentes) throw new RegraDeNegocioException("Finalize as colheitas antes de encerrar a safra!");
         safra.finalizarSafra();
         return new DadosDetalhamentoSafra(safra);
     }
