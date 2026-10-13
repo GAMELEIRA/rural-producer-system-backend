@@ -7,6 +7,8 @@ import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosAtualizacaoPl
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosCadastroPlantacao;
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosDetalhamentoPlantacao;
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosFinalizarColheita;
+import br.gov.sp.etec.gestaomicroprodutores.api.safra.Safra;
+import br.gov.sp.etec.gestaomicroprodutores.api.safra.SafraRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.talhao.Talhao;
 import br.gov.sp.etec.gestaomicroprodutores.api.talhao.TalhaoRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -29,6 +31,9 @@ public class PlantacaoService {
 
     @Autowired
     private CulturaRepository culturaRepository;
+
+    @Autowired
+    private SafraRepository safraRepository;
 
     public List<DadosDetalhamentoPlantacao> listar() {
         return plantacaoRepository.findAllComRelacionamentos()
@@ -72,7 +77,10 @@ public class PlantacaoService {
             throw new RegraDeNegocioException("A quantidade colhida não pode ser negativa!");
         }
 
+        Safra safra = obterSafraAtiva(dados.idSafra());
+        validarPeriodoSafra(safra, dados.dataPlantio(), dados.dataColheita());
         Plantacao plantacao = new Plantacao(talhao, cultura, dados);
+        plantacao.definirSafra(safra);
         plantacaoRepository.save(plantacao);
 
         return new DadosDetalhamentoPlantacao(plantacao);
@@ -102,7 +110,10 @@ public class PlantacaoService {
             throw new RegraDeNegocioException("A quantidade colhida não pode ser negativa!");
         }
 
+        Safra safra = dados.idSafra() != null ? obterSafraAtiva(dados.idSafra()) : plantacao.getSafra();
+        if (safra != null) validarPeriodoSafra(safra, dataPlantioFinal, dataColheitaFinal);
         plantacao.atualizarInformacoes(novoTalhao, novaCultura, dados);
+        if (dados.idSafra() != null) plantacao.definirSafra(safra);
 
         return new DadosDetalhamentoPlantacao(plantacao);
     }
@@ -111,6 +122,12 @@ public class PlantacaoService {
     public DadosDetalhamentoPlantacao finalizarColheita(Long id, DadosFinalizarColheita dados) {
         Plantacao plantacao = obter(id);
 
+        if ("COLHIDA".equalsIgnoreCase(plantacao.getStatus()) || "COLHIDO".equalsIgnoreCase(plantacao.getStatus())) {
+            throw new RegraDeNegocioException("Esta plantação já foi colhida!");
+        }
+        if (plantacao.getSafra() != null) {
+            validarPeriodoSafra(plantacao.getSafra(), plantacao.getDataPlantio(), dados.dataColheita());
+        }
         if (dados.dataColheita().isBefore(plantacao.getDataPlantio())) {
             throw new RegraDeNegocioException("A data da colheita não pode ser anterior à data de plantio (" + plantacao.getDataPlantio() + ")!");
         }
@@ -123,6 +140,22 @@ public class PlantacaoService {
     @Transactional
     public void excluir(Long id) {
         plantacaoRepository.delete(obter(id));
+    }
+
+    private Safra obterSafraAtiva(Long id) {
+        Safra safra = safraRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Safra não encontrada com ID: " + id));
+        if ("FINALIZADA".equalsIgnoreCase(safra.getStatus())) {
+            throw new RegraDeNegocioException("Não é possível vincular plantações a uma safra finalizada!");
+        }
+        return safra;
+    }
+
+    private void validarPeriodoSafra(Safra safra, LocalDate plantio, LocalDate colheita) {
+        if (plantio.isBefore(safra.getDataInicio()) || plantio.isAfter(safra.getDataFim())
+                || (colheita != null && (colheita.isBefore(safra.getDataInicio()) || colheita.isAfter(safra.getDataFim())))) {
+            throw new RegraDeNegocioException("As datas do cultivo devem estar dentro do período da safra!");
+        }
     }
 
     private Plantacao obter(Long id) {
