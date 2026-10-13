@@ -7,6 +7,11 @@ import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosAtualizacaoPl
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosCadastroPlantacao;
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosDetalhamentoPlantacao;
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosFinalizarColheita;
+import br.gov.sp.etec.gestaomicroprodutores.api.produto.Produto;
+import br.gov.sp.etec.gestaomicroprodutores.api.produto.ProdutoRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoEstoque;
+import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoEstoqueRepository;
+import java.time.LocalDateTime;
 import br.gov.sp.etec.gestaomicroprodutores.api.safra.Safra;
 import br.gov.sp.etec.gestaomicroprodutores.api.safra.SafraRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.talhao.Talhao;
@@ -34,6 +39,10 @@ public class PlantacaoService {
 
     @Autowired
     private SafraRepository safraRepository;
+    @Autowired
+    private ProdutoRepository produtoRepository;
+    @Autowired
+    private MovimentacaoEstoqueRepository movimentacaoEstoqueRepository;
 
     public List<DadosDetalhamentoPlantacao> listar() {
         return plantacaoRepository.findAllComRelacionamentos()
@@ -132,6 +141,16 @@ public class PlantacaoService {
             throw new RegraDeNegocioException("A data da colheita não pode ser anterior à data de plantio (" + plantacao.getDataPlantio() + ")!");
         }
 
+        Produto produto = produtoRepository.findById(dados.idProduto())
+                .orElseThrow(() -> new EntityNotFoundException("Produto da colheita não encontrado"));
+        if (dados.quantidadeColhida().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal anterior = produto.getQuantidadeEstoque();
+            produto.adicionarEstoque(dados.quantidadeColhida());
+            movimentacaoEstoqueRepository.save(new MovimentacaoEstoque(produto,
+                "ENTRADA_COLHEITA", LocalDateTime.now(), dados.quantidadeColhida(),
+                anterior, produto.getQuantidadeEstoque(), "Plantação #" + plantacao.getIdPlantacao(),
+                "Colheita da cultura " + plantacao.getCultura().getNome()));
+        }
         plantacao.finalizarColheita(dados);
 
         return new DadosDetalhamentoPlantacao(plantacao);
