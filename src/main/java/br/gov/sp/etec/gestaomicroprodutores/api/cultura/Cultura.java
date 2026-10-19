@@ -31,6 +31,8 @@ public class Cultura {
     private String observacoes;
     @Column(name = "imagem_codigo", length = 40)
     private String imagemCodigo;
+    @Lob @Column(name = "imagem_personalizada", columnDefinition = "LONGTEXT")
+    private String imagemPersonalizada;
 
     public Cultura(DadosCadastroCultura dados) {
         atualizarInformacoes(dados);
@@ -43,5 +45,6 @@ public class Cultura {
         this.unidadeCiclo = dados.unidadeCiclo();
         this.observacoes = dados.observacoes();
         this.imagemCodigo = dados.imagemCodigo();
+        this.imagemPersonalizada = dados.imagemPersonalizada();
     }
 }
