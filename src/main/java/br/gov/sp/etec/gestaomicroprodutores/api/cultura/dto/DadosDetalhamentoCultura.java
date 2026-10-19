@@ -9,7 +9,8 @@ public record DadosDetalhamentoCultura(
         Integer cicloEstimado,
         String unidadeCiclo,
         String observacoes,
-        String imagemCodigo
+        String imagemCodigo,
+        String imagemPersonalizada
 ) {
     public DadosDetalhamentoCultura(Cultura cultura) {
         this(
@@ -19,7 +20,8 @@ public record DadosDetalhamentoCultura(
                 cultura.getCicloEstimado(),
                 cultura.getUnidadeCiclo(),
                 cultura.getObservacoes(),
-                cultura.getImagemCodigo()
+                cultura.getImagemCodigo(),
+                cultura.getImagemPersonalizada()
         );
     }
 }

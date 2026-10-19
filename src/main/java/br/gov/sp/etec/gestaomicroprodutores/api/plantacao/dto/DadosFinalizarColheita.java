@@ -24,6 +24,9 @@ public record DadosFinalizarColheita(
         BigDecimal precoVendaNovoProduto,
 
         @Size(max = 500, message = "As observações devem ter no máximo 500 caracteres")
-        String observacoes
+        String observacoes,
+
+        @PositiveOrZero(message = "A perda na colheita não pode ser negativa")
+        BigDecimal quantidadePerdidaColheita
 ) {
 }

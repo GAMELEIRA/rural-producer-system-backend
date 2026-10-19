@@ -1,9 +1,9 @@
 name: Backend CI
 on:
   push:
-    branches: [main, feat/conclusao-gestao-rural]
+    branches: [main, feat/conclusao-gestao-rural, fix/exclusao-plantacao-estorno-feature]
   pull_request:
-    branches: [main]
+    branches: [main, feat/conclusao-gestao-rural]
 jobs:
   build:
     runs-on: ubuntu-latest

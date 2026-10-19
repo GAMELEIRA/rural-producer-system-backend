@@ -1,6 +1,7 @@
 package br.gov.sp.etec.gestaomicroprodutores.api.cultura;
 
 import br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException;
+import br.gov.sp.etec.gestaomicroprodutores.api.infra.validation.ImagemCadastroValidator;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.dto.DadosCadastroCultura;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.dto.DadosDetalhamentoCultura;
 import jakarta.persistence.EntityNotFoundException;
@@ -29,6 +30,7 @@ public class CulturaService {
         if (culturaRepository.existsByNomeIgnoreCase(dados.nome())) {
             throw new RegraDeNegocioException("Ja existe uma cultura cadastrada com este nome!");
         }
+        ImagemCadastroValidator.validar(dados.imagemPersonalizada());
         Cultura cultura = culturaRepository.save(new Cultura(dados));
         return new DadosDetalhamentoCultura(cultura);
     }
@@ -39,6 +41,7 @@ public class CulturaService {
         if (culturaRepository.existsByNomeIgnoreCaseAndIdCulturaNot(dados.nome(), id)) {
             throw new RegraDeNegocioException("Ja existe uma cultura cadastrada com este nome!");
         }
+        ImagemCadastroValidator.validar(dados.imagemPersonalizada());
         cultura.atualizarInformacoes(dados);
         return new DadosDetalhamentoCultura(cultura);
     }
