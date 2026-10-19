@@ -109,7 +109,8 @@ public class Plantacao {
 
     public void finalizarColheita(DadosFinalizarColheita dados) {
         this.dataColheita = dados.dataColheita();
-        this.quantidadeColhida = dados.quantidadeColhida();
+        this.quantidadeColhida = dados.quantidadeColhida().subtract(
+                dados.quantidadePerdidaColheita() == null ? BigDecimal.ZERO : dados.quantidadePerdidaColheita());
         this.status = "COLHIDA";
         if (dados.observacoes() != null && !dados.observacoes().isBlank()) {
             this.observacoes = (this.observacoes == null || this.observacoes.isBlank()) 
