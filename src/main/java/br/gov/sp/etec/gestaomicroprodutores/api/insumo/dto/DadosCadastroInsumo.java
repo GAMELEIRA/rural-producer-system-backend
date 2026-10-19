@@ -29,6 +29,9 @@ public record DadosCadastroInsumo(
         BigDecimal precoUnitario,
 
         @Size(max = 500, message = "As observações devem ter no máximo 500 caracteres")
-        String observacoes
+        String observacoes,
+
+        @Size(max = 40, message = "O código da imagem deve ter no máximo 40 caracteres")
+        String imagemCodigo
 ) {
 }

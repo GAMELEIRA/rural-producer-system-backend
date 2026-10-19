@@ -1,6 +1,8 @@
 package br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo;
 
 import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.dto.DadosAtualizacaoAplicacaoInsumo;
+import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoInsumo;
+import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoInsumoRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.dto.DadosCadastroAplicacaoInsumo;
 import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.dto.DadosDetalhamentoAplicacaoInsumo;
 import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.dto.ResumoCustoInsumosPlantacao;
@@ -29,6 +31,9 @@ public class AplicacaoInsumoService {
 
     @Autowired
     private InsumoRepository insumoRepository;
+
+    @Autowired
+    private MovimentacaoInsumoRepository movimentacaoInsumoRepository;
 
     public List<DadosDetalhamentoAplicacaoInsumo> listar() {
         return aplicacaoInsumoRepository.findAllComRelacionamentos()
@@ -68,7 +73,7 @@ public class AplicacaoInsumoService {
         Plantacao plantacao = plantacaoRepository.findById(dados.idPlantacao())
                 .orElseThrow(() -> new EntityNotFoundException("Plantação não encontrada com ID: " + dados.idPlantacao()));
 
-        Insumo insumo = insumoRepository.findById(dados.idInsumo())
+        Insumo insumo = insumoRepository.buscarParaMovimentacao(dados.idInsumo())
                 .orElseThrow(() -> new EntityNotFoundException("Insumo não encontrado com ID: " + dados.idInsumo()));
 
         if (dados.dataAplicacao().isBefore(plantacao.getDataPlantio())) {
@@ -93,6 +98,8 @@ public class AplicacaoInsumoService {
         );
 
         aplicacaoInsumoRepository.save(aplicacao);
+        movimentacaoInsumoRepository.save(new MovimentacaoInsumo(insumo, "SAIDA_APLICACAO",
+                dados.quantidade(), "Aplicação na plantação #" + plantacao.getIdPlantacao()));
 
         return new DadosDetalhamentoAplicacaoInsumo(aplicacao);
     }
@@ -109,8 +116,12 @@ public class AplicacaoInsumoService {
         if (dados.quantidade() != null && !dados.quantidade().equals(aplicacao.getQuantidade())) {
             // Estorna a quantidade anterior
             insumo.estornarEstoque(aplicacao.getQuantidade());
+            movimentacaoInsumoRepository.save(new MovimentacaoInsumo(insumo, "ENTRADA_ESTORNO",
+                    aplicacao.getQuantidade(), "Estorno da aplicação #" + id));
             // Debita a nova quantidade
             insumo.debitarEstoque(dados.quantidade());
+            movimentacaoInsumoRepository.save(new MovimentacaoInsumo(insumo, "SAIDA_APLICACAO",
+                    dados.quantidade(), "Alteração da aplicação #" + id));
 
             novoCustoTotal = dados.quantidade()
                     .multiply(insumo.getPrecoUnitario())
@@ -132,6 +143,8 @@ public class AplicacaoInsumoService {
 
         // Estorna a quantidade utilizada de volta para o estoque do insumo
         aplicacao.getInsumo().estornarEstoque(aplicacao.getQuantidade());
+        movimentacaoInsumoRepository.save(new MovimentacaoInsumo(aplicacao.getInsumo(),
+                "ENTRADA_ESTORNO", aplicacao.getQuantidade(), "Exclusão da aplicação #" + id));
 
         aplicacaoInsumoRepository.delete(aplicacao);
     }
