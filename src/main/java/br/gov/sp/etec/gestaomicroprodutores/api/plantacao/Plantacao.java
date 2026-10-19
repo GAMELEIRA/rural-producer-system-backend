@@ -39,6 +39,10 @@ public class Plantacao {
     @JoinColumn(name = "id_safra")
     private br.gov.sp.etec.gestaomicroprodutores.api.safra.Safra safra;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_produto_colheita")
+    private br.gov.sp.etec.gestaomicroprodutores.api.produto.Produto produtoColheita;
+
     @Column(name = "data_plantio", nullable = false)
     private LocalDate dataPlantio;
 
@@ -63,7 +67,8 @@ public class Plantacao {
         this.dataPlantio = dados.dataPlantio();
         this.dataColheita = dados.dataColheita();
         this.quantidadePlantada = dados.quantidadePlantada();
-        this.quantidadeColhida = dados.quantidadeColhida();
+        this.quantidadeColhida = dados.quantidadeColhida().subtract(
+                dados.quantidadePerdidaColheita() != null ? dados.quantidadePerdidaColheita() : BigDecimal.ZERO);
         this.status = (dados.status() != null && !dados.status().isBlank()) ? dados.status().trim().toUpperCase() : "EM_ANDAMENTO";
         this.observacoes = dados.observacoes();
     }
@@ -97,6 +102,10 @@ public class Plantacao {
 
     public void definirSafra(br.gov.sp.etec.gestaomicroprodutores.api.safra.Safra safra) {
         this.safra = safra;
+    }
+
+    public void vincularProdutoColheita(br.gov.sp.etec.gestaomicroprodutores.api.produto.Produto produto) {
+        this.produtoColheita = produto;
     }
 
     public void finalizarColheita(DadosFinalizarColheita dados) {
