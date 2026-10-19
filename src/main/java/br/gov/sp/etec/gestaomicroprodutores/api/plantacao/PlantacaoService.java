@@ -1,5 +1,9 @@
 package br.gov.sp.etec.gestaomicroprodutores.api.plantacao;
 
+import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.AplicacaoInsumoService;
+import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.AplicacaoInsumoRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.gasto.GastoProducaoRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.PerdaRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.Cultura;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.CulturaRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException;
@@ -43,6 +47,15 @@ public class PlantacaoService {
     private ProdutoRepository produtoRepository;
     @Autowired
     private MovimentacaoEstoqueRepository movimentacaoEstoqueRepository;
+
+    @Autowired
+    private AplicacaoInsumoService aplicacaoInsumoService;
+    @Autowired
+    private AplicacaoInsumoRepository aplicacaoInsumoRepository;
+    @Autowired
+    private GastoProducaoRepository gastoProducaoRepository;
+    @Autowired
+    private PerdaRepository perdaRepository;
 
     public List<DadosDetalhamentoPlantacao> listar() {
         return plantacaoRepository.findAllComRelacionamentos()
@@ -158,7 +171,38 @@ public class PlantacaoService {
 
     @Transactional
     public void excluir(Long id) {
-        plantacaoRepository.delete(obter(id));
+        Plantacao plantacao = obter(id);
+
+        // Uma colheita movimenta estoque compartilhado por outras operacoes.
+        // Reverter somente as entradas identificadas como sendo desta plantacao.
+        var colheitas = movimentacaoEstoqueRepository.findColheitasPorOrigem("Plantação #" + id);
+        for (MovimentacaoEstoque colheita : colheitas) {
+            Produto produto = produtoRepository.buscarParaMovimentacao(colheita.getProduto().getIdProduto())
+                    .orElseThrow(() -> new EntityNotFoundException("Produto da colheita não encontrado"));
+            if (produto.getQuantidadeEstoque().compareTo(colheita.getQuantidade()) < 0) {
+                throw new RegraDeNegocioException(
+                        "Não é possível excluir a plantação: a colheita já foi movimentada ou vendida e o estoque disponível de '" +
+                        produto.getNome() + "' é insuficiente para o estorno. Regularize as operações antes de excluir.");
+            }
+            produto.baixarEstoque(colheita.getQuantidade());
+            movimentacaoEstoqueRepository.delete(colheita);
+        }
+        movimentacaoEstoqueRepository.flush();
+
+        // Apagar aplicacoes usando a regra existente devolve insumos ao estoque.
+        aplicacaoInsumoRepository.findByPlantacaoIdPlantacao(id).forEach(aplicacao ->
+                aplicacaoInsumoService.excluir(aplicacao.getIdAplicacao()));
+        aplicacaoInsumoRepository.flush();
+
+        // Retirar somente gastos e perdas diretamente associados a plantacao.
+        gastoProducaoRepository.deleteAll(gastoProducaoRepository.findByPlantacaoIdPlantacaoOrderByDataGastoDesc(id));
+        gastoProducaoRepository.flush();
+        perdaRepository.deleteAll(perdaRepository.findByPlantacaoIdPlantacao(id));
+        perdaRepository.flush();
+
+        // A transacao reverte todos os passos se qualquer operacao falhar.
+        plantacaoRepository.delete(plantacao);
+        plantacaoRepository.flush();
     }
 
     private Safra obterSafraAtiva(Long id) {
