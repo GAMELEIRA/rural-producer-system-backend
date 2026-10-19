@@ -1,6 +1,7 @@
 package br.gov.sp.etec.gestaomicroprodutores.api.insumo;
 
 import br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException;
+import br.gov.sp.etec.gestaomicroprodutores.api.infra.validation.ImagemCadastroValidator;
 import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoInsumo;
 import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoInsumoRepository;
 import java.math.BigDecimal;
@@ -35,6 +36,7 @@ public class InsumoService {
         if (insumoRepository.existsByNomeIgnoreCase(dados.nome())) {
             throw new RegraDeNegocioException("Ja existe umo insumo cadastrado com este nome!");
         }
+        ImagemCadastroValidator.validar(dados.imagemPersonalizada());
         Insumo insumo = insumoRepository.save(new Insumo(dados));
         if (insumo.getQuantidadeEstoque().signum() > 0) {
             movimentacaoInsumoRepository.save(new MovimentacaoInsumo(insumo, "ENTRADA_INICIAL",
@@ -49,6 +51,7 @@ public class InsumoService {
         if (insumoRepository.existsByNomeIgnoreCaseAndIdInsumoNot(dados.nome(), id)) {
             throw new RegraDeNegocioException("Ja existe umo insumo cadastrado com este nome!");
         }
+        ImagemCadastroValidator.validar(dados.imagemPersonalizada());
         BigDecimal anterior = insumo.getQuantidadeEstoque();
         insumo.atualizarInformacoes(dados);
         BigDecimal diferenca = insumo.getQuantidadeEstoque().subtract(anterior);
