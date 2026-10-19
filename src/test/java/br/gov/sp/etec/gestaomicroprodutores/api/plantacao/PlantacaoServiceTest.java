@@ -32,7 +32,7 @@ class PlantacaoServiceTest {
         when(plantacaoRepository.findById(1L)).thenReturn(Optional.of(plantacao));
 
         DadosFinalizarColheita dados = new DadosFinalizarColheita(
-                LocalDate.of(2026, 10, 13), BigDecimal.TEN, 2L, null);
+                LocalDate.of(2026, 10, 13), BigDecimal.TEN, 2L, null, null, null, null);
 
         assertThrows(RegraDeNegocioException.class,
                 () -> service.finalizarColheita(1L, dados));
