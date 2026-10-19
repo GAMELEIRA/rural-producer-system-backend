@@ -176,6 +176,8 @@ public class PlantacaoService {
             if (produto.getCultura() != null && !produto.getCultura().getIdCultura().equals(plantacao.getCultura().getIdCultura()))
                 throw new RegraDeNegocioException("O produto escolhido pertence a outra cultura.");
             if (produto.getCultura() == null) produto.vincularCultura(plantacao.getCultura());
+            if (produto.getImagemCodigo() == null && produto.getImagemPersonalizada() == null)
+                produto.copiarImagemDaCultura(plantacao.getCultura());
         } else {
             // Fluxo atomico: o cadastro do produto e a colheita sao salvos ou revertidos juntos.
             if (dados.unidadeNovoProduto() == null || dados.unidadeNovoProduto().isBlank() ||
