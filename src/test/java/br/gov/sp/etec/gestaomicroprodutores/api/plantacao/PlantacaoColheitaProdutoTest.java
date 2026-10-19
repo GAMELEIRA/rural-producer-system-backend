@@ -47,7 +47,7 @@ class PlantacaoColheitaProdutoTest {
         when(produtos.save(any(Produto.class))).thenAnswer(inv -> inv.getArgument(0));
 
         var dados = new DadosFinalizarColheita(dataColheita, new BigDecimal("7.0"),
-                null, "kg", new BigDecimal("3.50"), null);
+                null, "kg", new BigDecimal("3.50"), null, null);
         service.finalizarColheita(1L, dados);
 
         verify(produtos).save(any(Produto.class));
@@ -58,7 +58,7 @@ class PlantacaoColheitaProdutoTest {
     @Test
     void naoCriaProdutoSeDadosIncompletos() {
         var dados = new DadosFinalizarColheita(dataColheita, new BigDecimal("1.0"),
-                null, null, null, null);
+                null, null, null, null, null);
         assertThrows(RegraDeNegocioException.class, () -> service.finalizarColheita(1L, dados));
         verify(produtos, never()).save(any(Produto.class));
         verify(movimentos, never()).save(any(MovimentacaoEstoque.class));
