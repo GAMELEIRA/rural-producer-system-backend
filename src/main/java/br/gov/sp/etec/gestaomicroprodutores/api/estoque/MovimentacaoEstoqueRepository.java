@@ -15,4 +15,7 @@ public interface MovimentacaoEstoqueRepository extends JpaRepository<Movimentaca
 
     @Query("SELECT m FROM MovimentacaoEstoque m JOIN FETCH m.produto WHERE m.produto.idProduto = :idProduto ORDER BY m.dataMovimentacao DESC")
     List<MovimentacaoEstoque> findByProdutoIdProdutoOrderByDataMovimentacaoDesc(@Param("idProduto") Long idProduto);
+
+    @Query("SELECT m FROM MovimentacaoEstoque m JOIN FETCH m.produto WHERE m.tipo = 'ENTRADA_COLHEITA' AND m.origem = :origem")
+    List<MovimentacaoEstoque> findColheitasPorOrigem(@Param("origem") String origem);
 }

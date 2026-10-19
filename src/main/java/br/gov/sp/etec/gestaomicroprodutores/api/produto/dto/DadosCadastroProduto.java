@@ -25,6 +25,9 @@ public record DadosCadastroProduto(
         BigDecimal quantidadeEstoque,
 
         @Size(max = 500, message = "As observações devem ter no máximo 500 caracteres")
-        String observacoes
+        String observacoes,
+        Long idCultura,
+        @Size(max = 40) String imagemCodigo,
+        String imagemPersonalizada
 ) {
 }

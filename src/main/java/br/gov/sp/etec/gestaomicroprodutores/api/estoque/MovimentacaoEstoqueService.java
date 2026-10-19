@@ -42,7 +42,7 @@ public class MovimentacaoEstoqueService {
 
     @Transactional
     public DadosDetalhamentoMovimentacao registrarEntrada(DadosEntradaEstoque dados) {
-        Produto produto = produtoRepository.findById(dados.idProduto())
+        Produto produto = produtoRepository.buscarParaMovimentacao(dados.idProduto())
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado com ID: " + dados.idProduto()));
 
         BigDecimal saldoAnterior = produto.getQuantidadeEstoque();
@@ -70,7 +70,7 @@ public class MovimentacaoEstoqueService {
 
     @Transactional
     public DadosDetalhamentoMovimentacao registrarSaida(DadosSaidaEstoque dados) {
-        Produto produto = produtoRepository.findById(dados.idProduto())
+        Produto produto = produtoRepository.buscarParaMovimentacao(dados.idProduto())
                 .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado com ID: " + dados.idProduto()));
 
         BigDecimal saldoAnterior = produto.getQuantidadeEstoque();

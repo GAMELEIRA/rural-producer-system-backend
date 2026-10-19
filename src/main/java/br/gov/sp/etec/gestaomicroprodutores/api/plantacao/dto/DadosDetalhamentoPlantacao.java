@@ -11,12 +11,15 @@ public record DadosDetalhamentoPlantacao(
         String nomeTalhao,
         Long idCultura,
         String nomeCultura,
+        Long idSafra,
+        String nomeSafra,
         LocalDate dataPlantio,
         LocalDate dataColheita,
         BigDecimal quantidadePlantada,
         BigDecimal quantidadeColhida,
         String status,
-        String observacoes
+        String observacoes,
+        Long idProdutoColheita
 ) {
     public DadosDetalhamentoPlantacao(Plantacao plantacao) {
         this(
@@ -25,12 +28,15 @@ public record DadosDetalhamentoPlantacao(
                 plantacao.getTalhao().getNome(),
                 plantacao.getCultura().getIdCultura(),
                 plantacao.getCultura().getNome(),
+                plantacao.getSafra() != null ? plantacao.getSafra().getIdSafra() : null,
+                plantacao.getSafra() != null ? plantacao.getSafra().getNome() : null,
                 plantacao.getDataPlantio(),
                 plantacao.getDataColheita(),
                 plantacao.getQuantidadePlantada(),
                 plantacao.getQuantidadeColhida(),
                 plantacao.getStatus(),
-                plantacao.getObservacoes()
+                plantacao.getObservacoes(),
+                plantacao.getProdutoColheita() != null ? plantacao.getProdutoColheita().getIdProduto() : null
         );
     }
 }

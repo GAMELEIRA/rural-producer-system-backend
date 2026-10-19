@@ -1,0 +1,31 @@
+name: Backend CI
+on:
+  push:
+    branches: [main, feat/conclusao-gestao-rural, fix/exclusao-plantacao-estorno-feature]
+  pull_request:
+    branches: [main, feat/conclusao-gestao-rural]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: gestao_microprodutores_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Compile and test
+        run: bash mvnw -B -DskipTests=false test

@@ -10,7 +10,10 @@ public record DadosDetalhamentoProduto(
         String unidadeMedida,
         BigDecimal precoVenda,
         BigDecimal quantidadeEstoque,
-        String observacoes
+        String observacoes,
+        Long idCultura,
+        String imagemCodigo,
+        String imagemPersonalizada
 ) {
     public DadosDetalhamentoProduto(Produto produto) {
         this(
@@ -19,7 +22,10 @@ public record DadosDetalhamentoProduto(
                 produto.getUnidadeMedida(),
                 produto.getPrecoVenda(),
                 produto.getQuantidadeEstoque(),
-                produto.getObservacoes()
+                produto.getObservacoes(),
+                produto.getCultura() != null ? produto.getCultura().getIdCultura() : null,
+                produto.getImagemCodigo(),
+                produto.getImagemPersonalizada()
         );
     }
 }

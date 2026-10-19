@@ -1,5 +1,13 @@
 package br.gov.sp.etec.gestaomicroprodutores.api.plantacao;
 
+import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.AplicacaoInsumoService;
+import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.AplicacaoInsumoRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.gasto.GastoProducaoRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.PerdaRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.Perda;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.PerdaService;
+import java.math.RoundingMode;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.dto.DadosCadastroPerda;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.Cultura;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.CulturaRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException;
@@ -7,6 +15,14 @@ import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosAtualizacaoPl
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosCadastroPlantacao;
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosDetalhamentoPlantacao;
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosFinalizarColheita;
+import br.gov.sp.etec.gestaomicroprodutores.api.produto.Produto;
+import br.gov.sp.etec.gestaomicroprodutores.api.produto.dto.DadosCadastroProduto;
+import br.gov.sp.etec.gestaomicroprodutores.api.produto.ProdutoRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoEstoque;
+import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoEstoqueRepository;
+import java.time.LocalDateTime;
+import br.gov.sp.etec.gestaomicroprodutores.api.safra.Safra;
+import br.gov.sp.etec.gestaomicroprodutores.api.safra.SafraRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.talhao.Talhao;
 import br.gov.sp.etec.gestaomicroprodutores.api.talhao.TalhaoRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -29,6 +45,23 @@ public class PlantacaoService {
 
     @Autowired
     private CulturaRepository culturaRepository;
+
+    @Autowired
+    private SafraRepository safraRepository;
+    @Autowired
+    private ProdutoRepository produtoRepository;
+    @Autowired
+    private MovimentacaoEstoqueRepository movimentacaoEstoqueRepository;
+
+    @Autowired
+    private AplicacaoInsumoService aplicacaoInsumoService;
+    @Autowired
+    private AplicacaoInsumoRepository aplicacaoInsumoRepository;
+    @Autowired
+    private GastoProducaoRepository gastoProducaoRepository;
+    @Autowired
+    private PerdaRepository perdaRepository;
+    @Autowired private PerdaService perdaService;
 
     public List<DadosDetalhamentoPlantacao> listar() {
         return plantacaoRepository.findAllComRelacionamentos()
@@ -72,7 +105,10 @@ public class PlantacaoService {
             throw new RegraDeNegocioException("A quantidade colhida não pode ser negativa!");
         }
 
+        Safra safra = obterSafraAtiva(dados.idSafra());
+        validarPeriodoSafra(safra, dados.dataPlantio(), dados.dataColheita());
         Plantacao plantacao = new Plantacao(talhao, cultura, dados);
+        plantacao.definirSafra(safra);
         plantacaoRepository.save(plantacao);
 
         return new DadosDetalhamentoPlantacao(plantacao);
@@ -102,7 +138,10 @@ public class PlantacaoService {
             throw new RegraDeNegocioException("A quantidade colhida não pode ser negativa!");
         }
 
+        Safra safra = dados.idSafra() != null ? obterSafraAtiva(dados.idSafra()) : plantacao.getSafra();
+        if (safra != null) validarPeriodoSafra(safra, dataPlantioFinal, dataColheitaFinal);
         plantacao.atualizarInformacoes(novoTalhao, novaCultura, dados);
+        if (dados.idSafra() != null) plantacao.definirSafra(safra);
 
         return new DadosDetalhamentoPlantacao(plantacao);
     }
@@ -111,10 +150,73 @@ public class PlantacaoService {
     public DadosDetalhamentoPlantacao finalizarColheita(Long id, DadosFinalizarColheita dados) {
         Plantacao plantacao = obter(id);
 
+        if ("COLHIDA".equalsIgnoreCase(plantacao.getStatus()) || "COLHIDO".equalsIgnoreCase(plantacao.getStatus())) {
+            throw new RegraDeNegocioException("Esta plantação já foi colhida!");
+        }
+        if (plantacao.getSafra() != null) {
+            validarPeriodoSafra(plantacao.getSafra(), plantacao.getDataPlantio(), dados.dataColheita());
+        }
         if (dados.dataColheita().isBefore(plantacao.getDataPlantio())) {
             throw new RegraDeNegocioException("A data da colheita não pode ser anterior à data de plantio (" + plantacao.getDataPlantio() + ")!");
         }
 
+        BigDecimal quantidadePerdida = dados.quantidadePerdidaColheita() == null
+                ? BigDecimal.ZERO : dados.quantidadePerdidaColheita();
+        if (dados.quantidadeColhida() == null || dados.quantidadeColhida().signum() < 0 ||
+                quantidadePerdida.signum() < 0 ||
+                quantidadePerdida.compareTo(dados.quantidadeColhida()) > 0) {
+            throw new RegraDeNegocioException("A perda na colheita não pode superar a quantidade colhida.");
+        }
+        BigDecimal quantidadeLiquida = dados.quantidadeColhida().subtract(quantidadePerdida);
+
+        Produto produto;
+        if (dados.idProduto() != null) {
+            produto = produtoRepository.buscarParaMovimentacao(dados.idProduto())
+                    .orElseThrow(() -> new EntityNotFoundException("Produto da colheita não encontrado"));
+            if (produto.getCultura() != null && !produto.getCultura().getIdCultura().equals(plantacao.getCultura().getIdCultura()))
+                throw new RegraDeNegocioException("O produto escolhido pertence a outra cultura.");
+            if (produto.getCultura() == null) produto.vincularCultura(plantacao.getCultura());
+            if (produto.getImagemCodigo() == null && produto.getImagemPersonalizada() == null)
+                produto.copiarImagemDaCultura(plantacao.getCultura());
+        } else {
+            // Fluxo atomico: o cadastro do produto e a colheita sao salvos ou revertidos juntos.
+            if (dados.unidadeNovoProduto() == null || dados.unidadeNovoProduto().isBlank() ||
+                    dados.precoVendaNovoProduto() == null) {
+                throw new RegraDeNegocioException("Informe a unidade e o preço do novo produto.");
+            }
+            String nomeProduto = plantacao.getCultura().getNome();
+            if (produtoRepository.existsByNomeIgnoreCase(nomeProduto)) {
+                throw new RegraDeNegocioException("Já existe um produto com este nome. Selecione-o na lista de produtos.");
+            }
+            produto = new Produto(new DadosCadastroProduto(
+                    nomeProduto, dados.unidadeNovoProduto().trim(),
+                    dados.precoVendaNovoProduto(), BigDecimal.ZERO,
+                    "Produto cadastrado automaticamente pela colheita da plantação #" + id,
+                    plantacao.getCultura().getIdCultura(),
+                    plantacao.getCultura().getImagemCodigo(),
+                    plantacao.getCultura().getImagemPersonalizada()
+            ));
+            produto.vincularCultura(plantacao.getCultura());
+            produto = produtoRepository.save(produto);
+        }
+        plantacao.vincularProdutoColheita(produto);
+        if (quantidadeLiquida.signum() > 0) {
+            BigDecimal anterior = produto.getQuantidadeEstoque();
+            produto.adicionarEstoque(quantidadeLiquida);
+            movimentacaoEstoqueRepository.save(new MovimentacaoEstoque(produto,
+                "ENTRADA_COLHEITA", LocalDateTime.now(), quantidadeLiquida,
+                anterior, produto.getQuantidadeEstoque(), "Plantação #" + plantacao.getIdPlantacao(),
+                "Colheita líquida da cultura " + plantacao.getCultura().getNome()));
+        }
+        if (quantidadePerdida.signum() > 0) {
+            BigDecimal valorEstimado = quantidadePerdida.multiply(produto.getPrecoVenda())
+                    .setScale(2, RoundingMode.HALF_UP);
+            Perda perda = new Perda(plantacao, new DadosCadastroPerda(
+                id, dados.dataColheita(), quantidadePerdida, "Perda identificada durante a colheita",
+                valorEstimado, "Lançamento automático da colheita. Quantidade bruta: " + dados.quantidadeColhida()));
+            perda.definirEtapa("NA_COLHEITA");
+            perdaRepository.save(perda);
+        }
         plantacao.finalizarColheita(dados);
 
         return new DadosDetalhamentoPlantacao(plantacao);
@@ -122,7 +224,60 @@ public class PlantacaoService {
 
     @Transactional
     public void excluir(Long id) {
-        plantacaoRepository.delete(obter(id));
+        Plantacao plantacao = obter(id);
+
+        // Estorna primeiro perdas pós-colheita para recompor a entrada líquida original.
+        // Perdas de campo e da colheita são registros informativos, sem baixa dupla.
+        var perdas = perdaRepository.findByPlantacaoIdPlantacao(id);
+        for (Perda perda : perdas) {
+            if ("POS_COLHEITA".equals(perda.getEtapa())) perdaService.excluir(perda.getIdPerda());
+        }
+        // Uma colheita movimenta estoque compartilhado por outras operacoes.
+        // Reverter somente as entradas identificadas como sendo desta plantacao.
+        var colheitas = movimentacaoEstoqueRepository.findColheitasPorOrigem("Plantação #" + id);
+        for (MovimentacaoEstoque colheita : colheitas) {
+            Produto produto = produtoRepository.buscarParaMovimentacao(colheita.getProduto().getIdProduto())
+                    .orElseThrow(() -> new EntityNotFoundException("Produto da colheita não encontrado"));
+            if (produto.getQuantidadeEstoque().compareTo(colheita.getQuantidade()) < 0) {
+                throw new RegraDeNegocioException(
+                        "Não é possível excluir a plantação: a colheita já foi movimentada ou vendida e o estoque disponível de '" +
+                        produto.getNome() + "' é insuficiente para o estorno. Regularize as operações antes de excluir.");
+            }
+            produto.baixarEstoque(colheita.getQuantidade());
+            movimentacaoEstoqueRepository.delete(colheita);
+        }
+        movimentacaoEstoqueRepository.flush();
+
+        // Apagar aplicacoes usando a regra existente devolve insumos ao estoque.
+        aplicacaoInsumoRepository.findByPlantacaoIdPlantacao(id).forEach(aplicacao ->
+                aplicacaoInsumoService.excluir(aplicacao.getIdAplicacao()));
+        aplicacaoInsumoRepository.flush();
+
+        // Retirar somente gastos e perdas diretamente associados a plantacao.
+        gastoProducaoRepository.deleteAll(gastoProducaoRepository.findByPlantacaoIdPlantacaoOrderByDataGastoDesc(id));
+        gastoProducaoRepository.flush();
+        perdaRepository.deleteAll(perdaRepository.findByPlantacaoIdPlantacao(id));
+        perdaRepository.flush();
+
+        // A transacao reverte todos os passos se qualquer operacao falhar.
+        plantacaoRepository.delete(plantacao);
+        plantacaoRepository.flush();
+    }
+
+    private Safra obterSafraAtiva(Long id) {
+        Safra safra = safraRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Safra não encontrada com ID: " + id));
+        if ("FINALIZADA".equalsIgnoreCase(safra.getStatus())) {
+            throw new RegraDeNegocioException("Não é possível vincular plantações a uma safra finalizada!");
+        }
+        return safra;
+    }
+
+    private void validarPeriodoSafra(Safra safra, LocalDate plantio, LocalDate colheita) {
+        if (plantio.isBefore(safra.getDataInicio()) || plantio.isAfter(safra.getDataFim())
+                || (colheita != null && (colheita.isBefore(safra.getDataInicio()) || colheita.isAfter(safra.getDataFim())))) {
+            throw new RegraDeNegocioException("As datas do cultivo devem estar dentro do período da safra!");
+        }
     }
 
     private Plantacao obter(Long id) {
