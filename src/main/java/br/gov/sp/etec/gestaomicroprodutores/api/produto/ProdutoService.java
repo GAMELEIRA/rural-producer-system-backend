@@ -1,6 +1,9 @@
 package br.gov.sp.etec.gestaomicroprodutores.api.produto;
 
 import br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException;
+import br.gov.sp.etec.gestaomicroprodutores.api.infra.validation.ImagemCadastroValidator;
+import br.gov.sp.etec.gestaomicroprodutores.api.cultura.CulturaRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.cultura.Cultura;
 import br.gov.sp.etec.gestaomicroprodutores.api.produto.dto.DadosCadastroProduto;
 import br.gov.sp.etec.gestaomicroprodutores.api.produto.dto.DadosDetalhamentoProduto;
 import jakarta.persistence.EntityNotFoundException;
@@ -20,6 +23,8 @@ public class ProdutoService {
     @Autowired
     private ProdutoRepository produtoRepository;
 
+    @Autowired private CulturaRepository culturaRepository;
+
     @Autowired
     private MovimentacaoEstoqueRepository movimentacaoEstoqueRepository;
 
@@ -36,7 +41,10 @@ public class ProdutoService {
         if (produtoRepository.existsByNomeIgnoreCase(dados.nome())) {
             throw new RegraDeNegocioException("Ja existe umo produto cadastrado com este nome!");
         }
-        Produto produto = produtoRepository.save(new Produto(dados));
+        ImagemCadastroValidator.validar(dados.imagemPersonalizada());
+        Produto produto = new Produto(dados);
+        vincularCultura(produto, dados.idCultura());
+        produto = produtoRepository.save(produto);
         if (produto.getQuantidadeEstoque().compareTo(BigDecimal.ZERO) > 0) {
             movimentacaoEstoqueRepository.save(new MovimentacaoEstoque(produto,
                     "ENTRADA_INICIAL", LocalDateTime.now(), produto.getQuantidadeEstoque(),
@@ -52,13 +60,21 @@ public class ProdutoService {
         if (produtoRepository.existsByNomeIgnoreCaseAndIdProdutoNot(dados.nome(), id)) {
             throw new RegraDeNegocioException("Ja existe umo produto cadastrado com este nome!");
         }
+        ImagemCadastroValidator.validar(dados.imagemPersonalizada());
         produto.atualizarDadosCadastrais(dados);
+        vincularCultura(produto, dados.idCultura());
         return new DadosDetalhamentoProduto(produto);
     }
 
     @Transactional
     public void excluir(Long id) {
         produtoRepository.delete(obter(id));
+    }
+
+    private void vincularCultura(Produto produto, Long idCultura) {
+        Cultura cultura = idCultura == null ? null : culturaRepository.findById(idCultura)
+            .orElseThrow(() -> new EntityNotFoundException("Cultura não encontrada."));
+        produto.vincularCultura(cultura);
     }
 
     private Produto obter(Long id) {
