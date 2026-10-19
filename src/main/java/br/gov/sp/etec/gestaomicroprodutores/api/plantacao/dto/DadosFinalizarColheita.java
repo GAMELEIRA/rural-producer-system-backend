@@ -15,8 +15,13 @@ public record DadosFinalizarColheita(
         @PositiveOrZero(message = "A quantidade colhida não pode ser negativa")
         BigDecimal quantidadeColhida,
 
-        @NotNull(message = "Informe o produto que receberá a colheita")
         Long idProduto,
+
+        @Size(max = 20, message = "Unidade do novo produto inválida")
+        String unidadeNovoProduto,
+
+        @PositiveOrZero(message = "O preço de venda não pode ser negativo")
+        BigDecimal precoVendaNovoProduto,
 
         @Size(max = 500, message = "As observações devem ter no máximo 500 caracteres")
         String observacoes
