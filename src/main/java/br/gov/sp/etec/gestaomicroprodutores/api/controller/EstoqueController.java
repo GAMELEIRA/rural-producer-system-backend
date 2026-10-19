@@ -39,6 +39,11 @@ public class EstoqueController {
         return ResponseEntity.ok(movimentacaoInsumoService.registrarEntrada(dados));
     }
 
+    @PostMapping("/insumos/saida")
+    public ResponseEntity<DadosDetalhamentoMovimentacaoInsumo> saidaInsumo(@RequestBody @Valid DadosEntradaInsumo dados) {
+        return ResponseEntity.ok(movimentacaoInsumoService.registrarSaida(dados));
+    }
+
     @GetMapping("/produto/{idProduto}")
     public ResponseEntity<List<DadosDetalhamentoMovimentacao>> listarPorProduto(@PathVariable Long idProduto) {
         return ResponseEntity.ok(movimentacaoEstoqueService.listarPorProduto(idProduto));
