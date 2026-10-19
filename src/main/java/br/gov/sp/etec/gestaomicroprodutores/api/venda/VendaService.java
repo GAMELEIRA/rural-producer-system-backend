@@ -94,6 +94,45 @@ public class VendaService {
         return new DadosDetalhamentoVenda(venda);
     }
 
+
+    @Transactional
+    public DadosDetalhamentoVenda atualizar(Long id, DadosCadastroVenda dados) {
+        Venda venda = vendaRepository.findByIdComItens(id)
+                .orElseThrow(() -> new EntityNotFoundException("Venda não encontrada com ID: " + id));
+        if (!"CONCLUIDA".equals(venda.getStatus())) {
+            throw new RegraDeNegocioException("Somente vendas concluídas podem ser corrigidas.");
+        }
+        if (dados.itens() == null || dados.itens().isEmpty()) {
+            throw new RegraDeNegocioException("A venda precisa ter itens.");
+        }
+        // Devolve o saldo dos itens antigos antes de debitar os novos, na mesma transação.
+        for (ItemVenda antigo : venda.getItens()) {
+            Produto produto = produtoRepository.buscarParaMovimentacao(antigo.getProduto().getIdProduto())
+                    .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado"));
+            BigDecimal anterior = produto.getQuantidadeEstoque();
+            produto.adicionarEstoque(antigo.getQuantidade());
+            movimentacaoEstoqueRepository.save(new MovimentacaoEstoque(produto, "ESTORNO_CORRECAO_VENDA",
+                    LocalDateTime.now(), antigo.getQuantidade(), anterior, produto.getQuantidadeEstoque(),
+                    "Correção da venda #" + id, null));
+        }
+        venda.getItens().clear();
+        venda.setCliente(dados.cliente() == null || dados.cliente().isBlank() ? "Consumidor Final" : dados.cliente().trim());
+        venda.setFormaPagamento(dados.formaPagamento());
+        if (dados.dataVenda() != null) venda.setDataVenda(dados.dataVenda());
+        venda.setObservacoes(dados.observacoes());
+        for (DadosItemVenda item : dados.itens()) {
+            Produto produto = produtoRepository.buscarParaMovimentacao(item.idProduto())
+                    .orElseThrow(() -> new EntityNotFoundException("Produto não encontrado: " + item.idProduto()));
+            BigDecimal anterior = produto.getQuantidadeEstoque();
+            produto.baixarEstoque(item.quantidade());
+            movimentacaoEstoqueRepository.save(new MovimentacaoEstoque(produto, "SAIDA_CORRECAO_VENDA",
+                    LocalDateTime.now(), item.quantidade(), anterior, produto.getQuantidadeEstoque(),
+                    "Correção da venda #" + id, null));
+            venda.adicionarItem(new ItemVenda(venda, produto, item.quantidade(), item.precoUnitario()));
+        }
+        return new DadosDetalhamentoVenda(venda);
+    }
+
     @Transactional
     public DadosDetalhamentoVenda cancelar(Long id) {
         Venda venda = vendaRepository.findByIdComItens(id)
