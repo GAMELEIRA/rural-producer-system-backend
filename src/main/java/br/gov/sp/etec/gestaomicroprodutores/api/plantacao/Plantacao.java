@@ -67,8 +67,7 @@ public class Plantacao {
         this.dataPlantio = dados.dataPlantio();
         this.dataColheita = dados.dataColheita();
         this.quantidadePlantada = dados.quantidadePlantada();
-        this.quantidadeColhida = dados.quantidadeColhida().subtract(
-                dados.quantidadePerdidaColheita() != null ? dados.quantidadePerdidaColheita() : BigDecimal.ZERO);
+        this.quantidadeColhida = dados.quantidadeColhida();
         this.status = (dados.status() != null && !dados.status().isBlank()) ? dados.status().trim().toUpperCase() : "EM_ANDAMENTO";
         this.observacoes = dados.observacoes();
     }
