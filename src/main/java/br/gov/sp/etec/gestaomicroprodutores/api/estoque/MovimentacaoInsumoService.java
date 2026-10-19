@@ -31,4 +31,14 @@ public class MovimentacaoInsumoService {
                         "Reposição de insumo" : dados.origem().trim()));
         return new DadosDetalhamentoMovimentacaoInsumo(movimentacao);
     }
+    @Transactional
+    public DadosDetalhamentoMovimentacaoInsumo registrarSaida(DadosEntradaInsumo dados) {
+        Insumo insumo = insumoRepository.buscarParaMovimentacao(dados.idInsumo())
+                .orElseThrow(() -> new EntityNotFoundException("Insumo não encontrado: " + dados.idInsumo()));
+        insumo.debitarEstoque(dados.quantidade());
+        var movimentacao = repository.save(new MovimentacaoInsumo(insumo, "SAIDA_AVULSA",
+                dados.quantidade(), dados.origem() == null || dados.origem().isBlank() ?
+                        "Saída manual de insumo" : dados.origem().trim()));
+        return new DadosDetalhamentoMovimentacaoInsumo(movimentacao);
+    }
 }
