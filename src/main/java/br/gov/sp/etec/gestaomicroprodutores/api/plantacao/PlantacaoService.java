@@ -5,6 +5,8 @@ import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.AplicacaoInsumoR
 import br.gov.sp.etec.gestaomicroprodutores.api.gasto.GastoProducaoRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.perda.PerdaRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.perda.Perda;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.PerdaService;
+import java.math.RoundingMode;
 import br.gov.sp.etec.gestaomicroprodutores.api.perda.dto.DadosCadastroPerda;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.Cultura;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.CulturaRepository;
@@ -59,6 +61,7 @@ public class PlantacaoService {
     private GastoProducaoRepository gastoProducaoRepository;
     @Autowired
     private PerdaRepository perdaRepository;
+    @Autowired private PerdaService perdaService;
 
     public List<DadosDetalhamentoPlantacao> listar() {
         return plantacaoRepository.findAllComRelacionamentos()
@@ -157,10 +160,22 @@ public class PlantacaoService {
             throw new RegraDeNegocioException("A data da colheita não pode ser anterior à data de plantio (" + plantacao.getDataPlantio() + ")!");
         }
 
+        BigDecimal quantidadePerdida = dados.quantidadePerdidaColheita() == null
+                ? BigDecimal.ZERO : dados.quantidadePerdidaColheita();
+        if (dados.quantidadeColhida() == null || dados.quantidadeColhida().signum() < 0 ||
+                quantidadePerdida.signum() < 0 ||
+                quantidadePerdida.compareTo(dados.quantidadeColhida()) > 0) {
+            throw new RegraDeNegocioException("A perda na colheita não pode superar a quantidade colhida.");
+        }
+        BigDecimal quantidadeLiquida = dados.quantidadeColhida().subtract(quantidadePerdida);
+
         Produto produto;
         if (dados.idProduto() != null) {
             produto = produtoRepository.buscarParaMovimentacao(dados.idProduto())
                     .orElseThrow(() -> new EntityNotFoundException("Produto da colheita não encontrado"));
+            if (produto.getCultura() != null && !produto.getCultura().getIdCultura().equals(plantacao.getCultura().getIdCultura()))
+                throw new RegraDeNegocioException("O produto escolhido pertence a outra cultura.");
+            if (produto.getCultura() == null) produto.vincularCultura(plantacao.getCultura());
         } else {
             // Fluxo atomico: o cadastro do produto e a colheita sao salvos ou revertidos juntos.
             if (dados.unidadeNovoProduto() == null || dados.unidadeNovoProduto().isBlank() ||
@@ -182,13 +197,23 @@ public class PlantacaoService {
             produto.vincularCultura(plantacao.getCultura());
             produto = produtoRepository.save(produto);
         }
-        if (dados.quantidadeColhida().compareTo(BigDecimal.ZERO) > 0) {
+        plantacao.vincularProdutoColheita(produto);
+        if (quantidadeLiquida.signum() > 0) {
             BigDecimal anterior = produto.getQuantidadeEstoque();
-            produto.adicionarEstoque(dados.quantidadeColhida());
+            produto.adicionarEstoque(quantidadeLiquida);
             movimentacaoEstoqueRepository.save(new MovimentacaoEstoque(produto,
-                "ENTRADA_COLHEITA", LocalDateTime.now(), dados.quantidadeColhida(),
+                "ENTRADA_COLHEITA", LocalDateTime.now(), quantidadeLiquida,
                 anterior, produto.getQuantidadeEstoque(), "Plantação #" + plantacao.getIdPlantacao(),
-                "Colheita da cultura " + plantacao.getCultura().getNome()));
+                "Colheita líquida da cultura " + plantacao.getCultura().getNome()));
+        }
+        if (quantidadePerdida.signum() > 0) {
+            BigDecimal valorEstimado = quantidadePerdida.multiply(produto.getPrecoVenda())
+                    .setScale(2, RoundingMode.HALF_UP);
+            Perda perda = new Perda(plantacao, new DadosCadastroPerda(
+                id, dados.dataColheita(), quantidadePerdida, "Perda identificada durante a colheita",
+                valorEstimado, "Lançamento automático da colheita. Quantidade bruta: " + dados.quantidadeColhida()));
+            perda.definirEtapa("NA_COLHEITA");
+            perdaRepository.save(perda);
         }
         plantacao.finalizarColheita(dados);
 
@@ -198,6 +223,14 @@ public class PlantacaoService {
     @Transactional
     public void excluir(Long id) {
         Plantacao plantacao = obter(id);
+
+        // Estorna primeiro perdas pós-colheita para recompor a entrada líquida original.
+        // Perdas de campo e da colheita são registros informativos, sem baixa dupla.
+        var perdas = perdaRepository.findByPlantacaoIdPlantacao(id);
+        for (Perda perda : perdas) {
+            if ("POS_COLHEITA".equals(perda.getEtapa())) perdaService.excluir(perda.getIdPerda());
+        }
+        perdaRepository.flush();
 
         // Uma colheita movimenta estoque compartilhado por outras operacoes.
         // Reverter somente as entradas identificadas como sendo desta plantacao.
