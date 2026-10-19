@@ -4,6 +4,8 @@ import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.AplicacaoInsumoS
 import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.AplicacaoInsumoRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.gasto.GastoProducaoRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.perda.PerdaRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.Perda;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.dto.DadosCadastroPerda;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.Cultura;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.CulturaRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException;
@@ -169,11 +171,16 @@ public class PlantacaoService {
             if (produtoRepository.existsByNomeIgnoreCase(nomeProduto)) {
                 throw new RegraDeNegocioException("Já existe um produto com este nome. Selecione-o na lista de produtos.");
             }
-            produto = produtoRepository.save(new Produto(new DadosCadastroProduto(
+            produto = new Produto(new DadosCadastroProduto(
                     nomeProduto, dados.unidadeNovoProduto().trim(),
                     dados.precoVendaNovoProduto(), BigDecimal.ZERO,
-                    "Produto cadastrado automaticamente pela colheita da plantação #" + id
-            )));
+                    "Produto cadastrado automaticamente pela colheita da plantação #" + id,
+                    plantacao.getCultura().getIdCultura(),
+                    plantacao.getCultura().getImagemCodigo(),
+                    plantacao.getCultura().getImagemPersonalizada()
+            ));
+            produto.vincularCultura(plantacao.getCultura());
+            produto = produtoRepository.save(produto);
         }
         if (dados.quantidadeColhida().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal anterior = produto.getQuantidadeEstoque();
