@@ -12,6 +12,7 @@ import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosCadastroPlant
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosDetalhamentoPlantacao;
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosFinalizarColheita;
 import br.gov.sp.etec.gestaomicroprodutores.api.produto.Produto;
+import br.gov.sp.etec.gestaomicroprodutores.api.produto.dto.DadosCadastroProduto;
 import br.gov.sp.etec.gestaomicroprodutores.api.produto.ProdutoRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoEstoque;
 import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoEstoqueRepository;
@@ -154,8 +155,26 @@ public class PlantacaoService {
             throw new RegraDeNegocioException("A data da colheita não pode ser anterior à data de plantio (" + plantacao.getDataPlantio() + ")!");
         }
 
-        Produto produto = produtoRepository.buscarParaMovimentacao(dados.idProduto())
-                .orElseThrow(() -> new EntityNotFoundException("Produto da colheita não encontrado"));
+        Produto produto;
+        if (dados.idProduto() != null) {
+            produto = produtoRepository.buscarParaMovimentacao(dados.idProduto())
+                    .orElseThrow(() -> new EntityNotFoundException("Produto da colheita não encontrado"));
+        } else {
+            // Fluxo atomico: o cadastro do produto e a colheita sao salvos ou revertidos juntos.
+            if (dados.unidadeNovoProduto() == null || dados.unidadeNovoProduto().isBlank() ||
+                    dados.precoVendaNovoProduto() == null) {
+                throw new RegraDeNegocioException("Informe a unidade e o preço do novo produto.");
+            }
+            String nomeProduto = plantacao.getCultura().getNome();
+            if (produtoRepository.existsByNomeIgnoreCase(nomeProduto)) {
+                throw new RegraDeNegocioException("Já existe um produto com este nome. Selecione-o na lista de produtos.");
+            }
+            produto = produtoRepository.save(new Produto(new DadosCadastroProduto(
+                    nomeProduto, dados.unidadeNovoProduto().trim(),
+                    dados.precoVendaNovoProduto(), BigDecimal.ZERO,
+                    "Produto cadastrado automaticamente pela colheita da plantação #" + id
+            )));
+        }
         if (dados.quantidadeColhida().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal anterior = produto.getQuantidadeEstoque();
             produto.adicionarEstoque(dados.quantidadeColhida());
