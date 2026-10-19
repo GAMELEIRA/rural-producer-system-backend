@@ -44,6 +44,8 @@ public class ProdutoService {
         ImagemCadastroValidator.validar(dados.imagemPersonalizada());
         Produto produto = new Produto(dados);
         vincularCultura(produto, dados.idCultura());
+        if (produto.getCultura() != null && produto.getImagemCodigo() == null && produto.getImagemPersonalizada() == null)
+            produto.copiarImagemDaCultura(produto.getCultura());
         produto = produtoRepository.save(produto);
         if (produto.getQuantidadeEstoque().compareTo(BigDecimal.ZERO) > 0) {
             movimentacaoEstoqueRepository.save(new MovimentacaoEstoque(produto,
