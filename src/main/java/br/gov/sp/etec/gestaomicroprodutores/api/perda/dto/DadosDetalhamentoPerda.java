@@ -14,7 +14,8 @@ public record DadosDetalhamentoPerda(
         BigDecimal quantidade,
         String motivo,
         BigDecimal valorEstimado,
-        String observacoes
+        String observacoes,
+        String etapa
 ) {
     public DadosDetalhamentoPerda(Perda perda) {
         this(
@@ -26,7 +27,8 @@ public record DadosDetalhamentoPerda(
                 perda.getQuantidade(),
                 perda.getMotivo(),
                 perda.getValorEstimado(),
-                perda.getObservacoes()
+                perda.getObservacoes(),
+                perda.getEtapa()
         );
     }
 }
