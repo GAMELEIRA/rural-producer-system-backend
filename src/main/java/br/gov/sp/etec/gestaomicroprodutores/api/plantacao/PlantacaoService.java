@@ -230,8 +230,6 @@ public class PlantacaoService {
         for (Perda perda : perdas) {
             if ("POS_COLHEITA".equals(perda.getEtapa())) perdaService.excluir(perda.getIdPerda());
         }
-        perdaRepository.flush();
-
         // Uma colheita movimenta estoque compartilhado por outras operacoes.
         // Reverter somente as entradas identificadas como sendo desta plantacao.
         var colheitas = movimentacaoEstoqueRepository.findColheitasPorOrigem("Plantação #" + id);
