@@ -35,6 +35,8 @@ public class Insumo {
     private String observacoes;
     @Column(name = "imagem_codigo", length = 40)
     private String imagemCodigo;
+    @Lob @Column(name = "imagem_personalizada", columnDefinition = "LONGTEXT")
+    private String imagemPersonalizada;
 
     public Insumo(DadosCadastroInsumo dados) {
         atualizarInformacoes(dados);
@@ -48,6 +50,7 @@ public class Insumo {
         this.precoUnitario = dados.precoUnitario();
         this.observacoes = dados.observacoes();
         this.imagemCodigo = dados.imagemCodigo();
+        this.imagemPersonalizada = dados.imagemPersonalizada();
     }
 
     public void debitarEstoque(BigDecimal quantidade) {
