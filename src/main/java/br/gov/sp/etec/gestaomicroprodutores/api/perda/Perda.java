@@ -44,6 +44,9 @@ public class Perda {
     @Column(length = 500)
     private String observacoes;
 
+    @Column(nullable = false, length = 30)
+    private String etapa = "EM_CAMPO";
+
     public Perda(Plantacao plantacao, DadosCadastroPerda dados) {
         this.plantacao = plantacao;
         this.dataPerda = dados.dataPerda();
@@ -52,6 +55,8 @@ public class Perda {
         this.valorEstimado = dados.valorEstimado() != null ? dados.valorEstimado() : BigDecimal.ZERO;
         this.observacoes = dados.observacoes();
     }
+
+    public void definirEtapa(String etapa) { this.etapa = etapa; }
 
     public void atualizarInformacoes(DadosAtualizacaoPerda dados) {
         if (dados.dataPerda() != null) {

@@ -12,7 +12,8 @@ public record DadosDetalhamentoInsumo(
         BigDecimal quantidadeEstoque,
         BigDecimal precoUnitario,
         String observacoes,
-        String imagemCodigo
+        String imagemCodigo,
+        String imagemPersonalizada
 ) {
     public DadosDetalhamentoInsumo(Insumo insumo) {
         this(
@@ -23,7 +24,8 @@ public record DadosDetalhamentoInsumo(
                 insumo.getQuantidadeEstoque(),
                 insumo.getPrecoUnitario(),
                 insumo.getObservacoes(),
-                insumo.getImagemCodigo()
+                insumo.getImagemCodigo(),
+                insumo.getImagemPersonalizada()
         );
     }
 }

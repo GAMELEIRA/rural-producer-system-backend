@@ -31,8 +31,9 @@ class PlantacaoServiceTest {
         when(plantacao.getStatus()).thenReturn("COLHIDA");
         when(plantacaoRepository.findById(1L)).thenReturn(Optional.of(plantacao));
 
+        // Dados ficticios: a operacao deve ser rejeitada independentemente dos valores.
         DadosFinalizarColheita dados = new DadosFinalizarColheita(
-                LocalDate.of(2026, 10, 13), BigDecimal.TEN, 2L, null);
+                LocalDate.of(2026, 10, 13), BigDecimal.TEN, 2L, null, null, null, null);
 
         assertThrows(RegraDeNegocioException.class,
                 () -> service.finalizarColheita(1L, dados));

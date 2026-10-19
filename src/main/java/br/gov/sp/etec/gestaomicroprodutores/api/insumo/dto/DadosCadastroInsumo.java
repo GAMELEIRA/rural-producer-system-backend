@@ -32,6 +32,7 @@ public record DadosCadastroInsumo(
         String observacoes,
 
         @Size(max = 40, message = "O código da imagem deve ter no máximo 40 caracteres")
-        String imagemCodigo
+        String imagemCodigo,
+        String imagemPersonalizada
 ) {
 }

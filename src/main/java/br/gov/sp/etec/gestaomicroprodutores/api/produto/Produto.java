@@ -1,6 +1,7 @@
 package br.gov.sp.etec.gestaomicroprodutores.api.produto;
 
 import br.gov.sp.etec.gestaomicroprodutores.api.produto.dto.DadosCadastroProduto;
+import br.gov.sp.etec.gestaomicroprodutores.api.cultura.Cultura;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -31,6 +32,13 @@ public class Produto {
     private BigDecimal quantidadeEstoque;
     @Column(length = 500)
     private String observacoes;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_cultura")
+    private Cultura cultura;
+    @Column(name = "imagem_codigo", length = 40)
+    private String imagemCodigo;
+    @Lob @Column(name = "imagem_personalizada", columnDefinition = "LONGTEXT")
+    private String imagemPersonalizada;
 
     public Produto(DadosCadastroProduto dados) {
         atualizarInformacoes(dados);
@@ -42,6 +50,8 @@ public class Produto {
         this.precoVenda = dados.precoVenda();
         this.quantidadeEstoque = dados.quantidadeEstoque();
         this.observacoes = dados.observacoes();
+        this.imagemCodigo = dados.imagemCodigo();
+        this.imagemPersonalizada = dados.imagemPersonalizada();
     }
 
     public void atualizarDadosCadastrais(DadosCadastroProduto dados) {
@@ -49,6 +59,15 @@ public class Produto {
         this.unidadeMedida = dados.unidadeMedida();
         this.precoVenda = dados.precoVenda();
         this.observacoes = dados.observacoes();
+    }
+
+    public void vincularCultura(Cultura cultura) {
+        this.cultura = cultura;
+    }
+
+    public void copiarImagemDaCultura(Cultura cultura) {
+        this.imagemCodigo = cultura.getImagemCodigo();
+        this.imagemPersonalizada = cultura.getImagemPersonalizada();
     }
 
     public void adicionarEstoque(BigDecimal quantidade) {

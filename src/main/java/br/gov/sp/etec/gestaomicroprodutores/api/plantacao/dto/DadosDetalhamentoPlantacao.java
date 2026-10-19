@@ -18,7 +18,8 @@ public record DadosDetalhamentoPlantacao(
         BigDecimal quantidadePlantada,
         BigDecimal quantidadeColhida,
         String status,
-        String observacoes
+        String observacoes,
+        Long idProdutoColheita
 ) {
     public DadosDetalhamentoPlantacao(Plantacao plantacao) {
         this(
@@ -34,7 +35,8 @@ public record DadosDetalhamentoPlantacao(
                 plantacao.getQuantidadePlantada(),
                 plantacao.getQuantidadeColhida(),
                 plantacao.getStatus(),
-                plantacao.getObservacoes()
+                plantacao.getObservacoes(),
+                plantacao.getProdutoColheita() != null ? plantacao.getProdutoColheita().getIdProduto() : null
         );
     }
 }
