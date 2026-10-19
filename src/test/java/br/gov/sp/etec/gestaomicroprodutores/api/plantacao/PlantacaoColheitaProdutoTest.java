@@ -4,6 +4,9 @@ import br.gov.sp.etec.gestaomicroprodutores.api.cultura.Cultura;
 import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoEstoque;
 import br.gov.sp.etec.gestaomicroprodutores.api.estoque.MovimentacaoEstoqueRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.Perda;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.PerdaRepository;
+import org.mockito.ArgumentCaptor;
 import br.gov.sp.etec.gestaomicroprodutores.api.plantacao.dto.DadosFinalizarColheita;
 import br.gov.sp.etec.gestaomicroprodutores.api.produto.Produto;
 import br.gov.sp.etec.gestaomicroprodutores.api.produto.ProdutoRepository;
@@ -25,6 +28,7 @@ class PlantacaoColheitaProdutoTest {
     @Mock PlantacaoRepository plantacoes;
     @Mock ProdutoRepository produtos;
     @Mock MovimentacaoEstoqueRepository movimentos;
+    @Mock PerdaRepository perdas;
     @InjectMocks PlantacaoService service;
     private Plantacao plantacao;
     private final LocalDate dataColheita = LocalDate.of(2026,10,19);
@@ -52,6 +56,27 @@ class PlantacaoColheitaProdutoTest {
 
         verify(produtos).save(any(Produto.class));
         verify(movimentos).save(any(MovimentacaoEstoque.class));
+        verify(plantacao).finalizarColheita(dados);
+    }
+
+    @Test
+    void registraSomenteQuantidadeLiquidaEPerdaSeparadamente() {
+        Cultura cultura = mock(Cultura.class);
+        Talhao talhao = mock(Talhao.class);
+        when(plantacao.getCultura()).thenReturn(cultura);
+        when(plantacao.getTalhao()).thenReturn(talhao);
+        when(plantacao.getIdPlantacao()).thenReturn(1L);
+        when(cultura.getNome()).thenReturn("Cenoura");
+        when(produtos.save(any(Produto.class))).thenAnswer(inv -> inv.getArgument(0));
+        var dados = new DadosFinalizarColheita(dataColheita, new BigDecimal("20"),
+                null, "un", new BigDecimal("2.00"), null, new BigDecimal("5"));
+        service.finalizarColheita(1L, dados);
+
+        ArgumentCaptor<MovimentacaoEstoque> captor = ArgumentCaptor.forClass(MovimentacaoEstoque.class);
+        verify(movimentos).save(captor.capture());
+        assertEquals(0, captor.getValue().getQuantidade().compareTo(new BigDecimal("15")));
+        verify(perdas).save(argThat(p -> p.getEtapa().equals("NA_COLHEITA")
+                && p.getQuantidade().compareTo(new BigDecimal("5")) == 0));
         verify(plantacao).finalizarColheita(dados);
     }
 
