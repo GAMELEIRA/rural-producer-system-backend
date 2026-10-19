@@ -73,7 +73,7 @@ public class AplicacaoInsumoService {
         Plantacao plantacao = plantacaoRepository.findById(dados.idPlantacao())
                 .orElseThrow(() -> new EntityNotFoundException("Plantação não encontrada com ID: " + dados.idPlantacao()));
 
-        Insumo insumo = insumoRepository.findById(dados.idInsumo())
+        Insumo insumo = insumoRepository.buscarParaMovimentacao(dados.idInsumo())
                 .orElseThrow(() -> new EntityNotFoundException("Insumo não encontrado com ID: " + dados.idInsumo()));
 
         if (dados.dataAplicacao().isBefore(plantacao.getDataPlantio())) {
