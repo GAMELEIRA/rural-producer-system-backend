@@ -58,6 +58,36 @@ class PerdaServiceEstoqueTest {
         verify(movimentacoes).save(any());
     }
 
+    @Test
+    void excluirPerdaAposColheitaDevolveSaldoAoEstoque() {
+        Plantacao plantacao = mock(Plantacao.class);
+        Produto produto = mock(Produto.class);
+        Perda perda = mock(Perda.class);
+        when(perdas.findById(12L)).thenReturn(Optional.of(perda));
+        when(perda.getEtapa()).thenReturn("POS_COLHEITA");
+        when(perda.getQuantidade()).thenReturn(new BigDecimal("4"));
+        when(perda.getPlantacao()).thenReturn(plantacao);
+        when(plantacao.getProdutoColheita()).thenReturn(produto);
+        when(produto.getIdProduto()).thenReturn(7L);
+        when(produtos.buscarParaMovimentacao(7L)).thenReturn(Optional.of(produto));
+        when(produto.getQuantidadeEstoque()).thenReturn(new BigDecimal("10"));
+        service.excluir(12L);
+        verify(produto).adicionarEstoque(new BigDecimal("4"));
+        verify(perdas).delete(perda);
+        verify(movimentacoes).save(any());
+    }
+
+    @Test
+    void impedeExcluirPerdaQueJaFoiDescontadaDaEntradaDaColheita() {
+        Perda perda = mock(Perda.class);
+        when(perdas.findById(12L)).thenReturn(Optional.of(perda));
+        when(perda.getEtapa()).thenReturn("NA_COLHEITA");
+        assertThrows(br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException.class,
+                () -> service.excluir(12L));
+        verify(perdas, never()).delete(any());
+        verifyNoInteractions(produtos, movimentacoes);
+    }
+
     private Plantacao plantacao(String status) {
         Plantacao pl = mock(Plantacao.class);
         Talhao talhao = mock(Talhao.class);
