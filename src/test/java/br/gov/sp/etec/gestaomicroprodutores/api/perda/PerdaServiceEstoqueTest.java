@@ -59,6 +59,53 @@ class PerdaServiceEstoqueTest {
     }
 
     @Test
+    void sugereOnzeReaisParaVinteCenourasACinquentaECincoCentavos() {
+        Plantacao plantacao = plantacao("EM_ANDAMENTO");
+        Cultura cultura = plantacao.getCultura();
+        Produto produto = mock(Produto.class);
+        when(cultura.getIdCultura()).thenReturn(6L);
+        when(produtos.findByCulturaIdCultura(6L)).thenReturn(java.util.List.of(produto));
+        when(produto.getPrecoVenda()).thenReturn(new BigDecimal("0.55"));
+        when(plantacoes.findById(1L)).thenReturn(Optional.of(plantacao));
+        when(perdas.save(any(Perda.class))).thenAnswer(i -> i.getArgument(0));
+
+        var retorno = service.cadastrar(new DadosCadastroPerda(1L, LocalDate.of(2026,10,18),
+                new BigDecimal("20"), "Pragas", null, null));
+
+        assertEquals(new BigDecimal("11.00"), retorno.valorEstimado());
+        verifyNoInteractions(movimentacoes);
+    }
+
+    @Test
+    void valorInformadoPeloUsuarioTemPrioridadeSobreSugestao() {
+        Plantacao plantacao = plantacao("EM_ANDAMENTO");
+        when(plantacoes.findById(1L)).thenReturn(Optional.of(plantacao));
+        when(perdas.save(any(Perda.class))).thenAnswer(i -> i.getArgument(0));
+
+        var retorno = service.cadastrar(new DadosCadastroPerda(1L, LocalDate.of(2026,10,18),
+                new BigDecimal("20"), "Pragas", new BigDecimal("9.50"), null));
+
+        assertEquals(new BigDecimal("9.50"), retorno.valorEstimado());
+        verifyNoInteractions(produtos);
+    }
+
+    @Test
+    void naoEscolhePrecoArbitrariamenteQuandoExistemDoisProdutosDaMesmaCultura() {
+        Plantacao plantacao = plantacao("EM_ANDAMENTO");
+        Cultura cultura = plantacao.getCultura();
+        when(cultura.getIdCultura()).thenReturn(6L);
+        when(produtos.findByCulturaIdCultura(6L)).thenReturn(java.util.List.of(mock(Produto.class), mock(Produto.class)));
+        when(plantacoes.findById(1L)).thenReturn(Optional.of(plantacao));
+        when(perdas.save(any(Perda.class))).thenAnswer(i -> i.getArgument(0));
+
+        var retorno = service.cadastrar(new DadosCadastroPerda(1L, LocalDate.of(2026,10,18),
+                new BigDecimal("20"), "Pragas", null, null));
+
+        assertEquals(new BigDecimal("0.00"), retorno.valorEstimado());
+        verifyNoInteractions(movimentacoes);
+    }
+
+    @Test
     void excluirPerdaAposColheitaDevolveSaldoAoEstoque() {
         Plantacao plantacao = mock(Plantacao.class);
         Produto produto = mock(Produto.class);

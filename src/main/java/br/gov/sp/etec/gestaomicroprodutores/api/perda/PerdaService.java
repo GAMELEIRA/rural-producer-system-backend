@@ -16,9 +16,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class PerdaService {
@@ -62,7 +64,15 @@ public class PerdaService {
                 || plantacao.getStatus().equalsIgnoreCase("COLHIDO");
         if (colhida && dados.dataPerda().isBefore(plantacao.getDataColheita()))
             throw new RegraDeNegocioException("Perda após colheita deve ter data igual ou posterior à colheita.");
-        Perda perda = new Perda(plantacao, dados);
+        // Preenche o valor apenas se o cliente não informou uma estimativa.
+        // A origem é o preço de venda, logo representa potencial de receita perdida.
+        BigDecimal valorEstimado = dados.valorEstimado() != null
+                ? dados.valorEstimado()
+                : sugerirValorPerdido(plantacao, dados.quantidade());
+        DadosCadastroPerda dadosComEstimativa = new DadosCadastroPerda(
+                dados.idPlantacao(), dados.dataPerda(), dados.quantidade(),
+                dados.motivo(), valorEstimado, dados.observacoes());
+        Perda perda = new Perda(plantacao, dadosComEstimativa);
         if (colhida) perda.definirEtapa("POS_COLHEITA");
         perda = perdaRepository.save(perda);
         if (colhida) movimentarEstoque(perda, dados.quantidade(), true,
@@ -101,6 +111,28 @@ public class PerdaService {
                     "ENTRADA_ESTORNO_PERDA", "Exclusão da perda #" + id);
         }
         perdaRepository.delete(perda);
+    }
+
+    /**
+     * Precificação opcional e segura para lançamentos vindos de outros clientes da API.
+     * Após a colheita usa o produto realmente vinculado; antes dela exige um único
+     * produto da cultura. Para cadastros antigos, tenta o nome exato sem vínculo.
+     * Sem preço inequívoco, mantém o comportamento anterior (estimativa zero).
+     */
+    private BigDecimal sugerirValorPerdido(Plantacao plantacao, BigDecimal quantidade) {
+        Optional<Produto> produto = Optional.ofNullable(plantacao.getProdutoColheita());
+        if (produto.isEmpty()) {
+            List<Produto> candidatos = produtoRepository.findByCulturaIdCultura(plantacao.getCultura().getIdCultura());
+            if (candidatos.size() == 1) {
+                produto = Optional.of(candidatos.get(0));
+            } else if (candidatos.isEmpty()) {
+                produto = produtoRepository.findByNomeIgnoreCase(plantacao.getCultura().getNome())
+                        .filter(p -> p.getCultura() == null);
+            }
+        }
+        return produto.filter(p -> p.getPrecoVenda() != null)
+                .map(p -> quantidade.multiply(p.getPrecoVenda()).setScale(2, RoundingMode.HALF_UP))
+                .orElse(BigDecimal.ZERO.setScale(2));
     }
 
     private void movimentarEstoque(Perda perda, BigDecimal qtd, boolean saida, String tipo, String origem) {
