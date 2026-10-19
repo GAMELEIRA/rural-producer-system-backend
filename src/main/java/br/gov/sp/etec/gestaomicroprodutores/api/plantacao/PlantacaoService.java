@@ -1,5 +1,9 @@
 package br.gov.sp.etec.gestaomicroprodutores.api.plantacao;
 
+import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.AplicacaoInsumoService;
+import br.gov.sp.etec.gestaomicroprodutores.api.aplicacaoinsumo.AplicacaoInsumoRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.gasto.GastoProducaoRepository;
+import br.gov.sp.etec.gestaomicroprodutores.api.perda.PerdaRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.Cultura;
 import br.gov.sp.etec.gestaomicroprodutores.api.cultura.CulturaRepository;
 import br.gov.sp.etec.gestaomicroprodutores.api.infra.exception.RegraDeNegocioException;
@@ -29,6 +33,18 @@ public class PlantacaoService {
 
     @Autowired
     private CulturaRepository culturaRepository;
+
+    @Autowired
+    private AplicacaoInsumoRepository aplicacaoInsumoRepository;
+
+    @Autowired
+    private AplicacaoInsumoService aplicacaoInsumoService;
+
+    @Autowired
+    private GastoProducaoRepository gastoProducaoRepository;
+
+    @Autowired
+    private PerdaRepository perdaRepository;
 
     public List<DadosDetalhamentoPlantacao> listar() {
         return plantacaoRepository.findAllComRelacionamentos()
@@ -122,7 +138,22 @@ public class PlantacaoService {
 
     @Transactional
     public void excluir(Long id) {
-        plantacaoRepository.delete(obter(id));
+        Plantacao plantacao = obter(id);
+
+        // Reutiliza a regra existente para devolver os insumos ao estoque.
+        aplicacaoInsumoRepository.findByPlantacaoIdPlantacao(id).forEach(aplicacao ->
+                aplicacaoInsumoService.excluir(aplicacao.getIdAplicacao()));
+        aplicacaoInsumoRepository.flush();
+
+        // Os registros dependentes deixam de compor os resumos de custos e perdas.
+        gastoProducaoRepository.deleteAll(gastoProducaoRepository.findByPlantacaoIdPlantacaoOrderByDataGastoDesc(id));
+        gastoProducaoRepository.flush();
+        perdaRepository.deleteAll(perdaRepository.findByPlantacaoIdPlantacao(id));
+        perdaRepository.flush();
+
+        // Vendas e estoques de produtos nao estao vinculados exclusivamente a plantacao.
+        plantacaoRepository.delete(plantacao);
+        plantacaoRepository.flush();
     }
 
     private Plantacao obter(Long id) {
