@@ -48,6 +48,11 @@ public class VendaController {
         return ResponseEntity.created(uri).body(venda);
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<DadosDetalhamentoVenda> atualizar(@PathVariable Long id, @RequestBody @Valid DadosCadastroVenda dados) {
+        return ResponseEntity.ok(vendaService.atualizar(id, dados));
+    }
+
     @PatchMapping("/{id}/cancelar")
     public ResponseEntity<DadosDetalhamentoVenda> cancelar(@PathVariable Long id) {
         return ResponseEntity.ok(vendaService.cancelar(id));
