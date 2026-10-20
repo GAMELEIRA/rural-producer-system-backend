@@ -66,4 +66,10 @@ public class AutenticacaoController {
 
         return ResponseEntity.created(uri).body(usuarioDetalhado);
     }
+
+    @PostMapping("/recuperar-senha")
+    public ResponseEntity<Void> recuperarSenha(@RequestBody @Valid br.gov.sp.etec.gestaomicroprodutores.api.usuario.dto.DadosRecuperacaoSenha dados) {
+        log.info("Recuperação de senha solicitada para e-mail={}", dados.email());
+        return ResponseEntity.ok().build();
+    }
 }

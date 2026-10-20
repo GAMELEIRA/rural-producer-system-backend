@@ -12,4 +12,11 @@ public record ResumoFinanceiroGeral(
         BigDecimal saldoLiquido,
         BigDecimal margemLucroPercentual
 ) {
+    public BigDecimal getCustoTotalGastos() {
+        return custoTotalGastosProducao;
+    }
+
+    public BigDecimal getCustoTotalPerdas() {
+        return custoTotalPerdasEstimadas;
+    }
 }
